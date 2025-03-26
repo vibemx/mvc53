@@ -1,0 +1,11 @@
+RewriteEngine On
+
+# Si la solicitud no es un archivo o directorio existente, redirige a index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirigir todas las rutas a index.php, incluyendo los segmentos de URL
+RewriteRule ^(.*)$ index.php?uri=$1 [QSA,L]
+
+# Manejar el error 404 personalizado
+ErrorDocument 404 /app/views/errors/404.php

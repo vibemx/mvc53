@@ -1,0 +1,42 @@
+.menu_iconos iframe {
+  width: 100%;
+  height: 120px;
+  border: none;
+}
+
+footer {
+  background: #eeeeee;
+}
+
+/* Estilo para la marca de agua con texto */
+
+.watermark {
+  position: fixed; /* Fija el elemento en la pantalla */
+  top: 60%; /* Coloca el texto verticalmente en el centro (puedes ajustar esto) */
+  left: 50%; /* Coloca el texto horizontalmente en el centro (puedes ajustar esto) */
+  transform: translate(
+    -50%,
+    -50%
+  ); /* Ajusta para que quede perfectamente centrado */
+  font-size: 4vw; /* Tamaño del texto, ajusta a lo que desees */
+  color: rgba(0, 0, 0, 0.2); /* Color gris claro con opacidad */
+  pointer-events: none; /* Impide que el texto interfiera con interacciones en otros elementos */
+  user-select: none; /* Impide la selección del texto */
+  font-weight: bold; /* Puedes personalizar el estilo aquí */
+  text-transform: uppercase; /* Opcional   : hace que todo el texto sea mayúsculas */
+  white-space: nowrap; /* Evita que el texto se divida en líneas */
+  z-index: 9999; /* Asegura que la marca de agua esté sobre el contenido */
+  opacity: 0.2; /* Baja la opacidad para dar el efecto de marca de agua */
+  font-family: Arial, sans-serif; /* Usa una fuente simple */
+  line-height: 2.5;
+}
+
+.square-btn {
+  width: 40px; /* Controla el ancho del botón */
+  height: 40px; /* Controla la altura del botón */
+  padding: 0; /* Elimina el padding predeterminado */
+  display: flex;
+  justify-content: center; /* Centra el ícono horizontalmente */
+  align-items: center; /* Centra el ícono verticalmente */
+  border-radius: 0; /* Elimina el borde redondeado */
+}

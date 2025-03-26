@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /mvc_53/
+
+# Si la URL comienza con "assets/", redirigir a public/assets sin pasar por index.php
+RewriteRule ^assets/(.*)$ public/assets/$1 [L,QSA]
+
+# Para todas las demás solicitudes que no sean archivos o directorios existentes en la raíz,
+# redirigir a public/index.php pasando la URI como parámetro
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ public/index.php?uri=$1 [L,QSA]
