@@ -17,6 +17,7 @@ MVC53/
 ├── public/                # Carpeta pública accesible desde el navegador
 │   ├── assets/            # Recursos estáticos (CSS, JS, imágenes)
 │   └── index.php          # Punto de entrada principal
+├── routes/                # Rutas del sistema
 └── README.md              # Documentación del proyecto
 ```
 
@@ -57,6 +58,17 @@ define('URL_BASE', 'http://localhost/mvc_53/');
     RewriteBase /miproyecto/
     ```
 
+##Definición de Rutas
+Las rutas del sistema se definen en el archivo routes/routes.php.
+La sintaxis general es:
+```php
+Copiar
+Editar
+Route::metodo('uri', 'Controlador@metodo', 'tipo');
+```
+-El campo tipo puede ser vacío o 'api'.
+-Si la URI contiene {}, se interpreta que recibirá un parámetro dinámico.
+-Las rutas se consideran como API si comienzan con api/ o si se especifica el tipo como 'api'.
 
 ## Uso
 - Los controladores manejan la lógica de la aplicación.
