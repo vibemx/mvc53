@@ -58,18 +58,22 @@ define('URL_BASE', 'http://localhost/mvc_53/');
     RewriteBase /miproyecto/
     ```
 
-##Definición de Rutas
-Las rutas del sistema se definen en el archivo routes/routes.php.
-La sintaxis general es:
+## Definición de Rutas
+Las rutas del sistema se definen en el archivo routes/routes.php. 
+La sintaxis general es: 
+    ```php
+    Route::metodo('uri/{parametro}', 'Controlador@metodo', 'tipo');
+    ```
+- El campo tipo puede ser vacío o 'api'.
+- Si la URI contiene {parametro}, se interpreta que recibirá un parámetro dinámico.
+- Las rutas se consideran como API si comienzan con api/ o si se especifica el tipo como 'api'.
 ```php
-Copiar
-Editar
-Route::metodo('uri', 'Controlador@metodo', 'tipo');
+Route::get('api/example/{id}', 'ExampleController@show');
+Route::get('api/example', 'ExampleController@index');
+Route::post('api/example', 'ExampleController@store');
+Route::put('api/example/{id}', 'ExampleController@update', 'api');
+Route::get('inicio/home', 'HomeController@index');
 ```
--El campo tipo puede ser vacío o 'api'.
--Si la URI contiene {}, se interpreta que recibirá un parámetro dinámico.
--Las rutas se consideran como API si comienzan con api/ o si se especifica el tipo como 'api'.
-
 ## Uso
 - Los controladores manejan la lógica de la aplicación.
 - Los modelos gestionan la interacción con la base de datos.
