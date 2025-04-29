@@ -1,5 +1,4 @@
 <?php
-
 require_once('../config/config.php');
 require_once('../app/helpers/jsonHelper.php');
 require_once('../app/helpers/textHelper.php');
@@ -25,14 +24,15 @@ class Controller
 
         // Verificar si el archivo del modelo existe
         if (!file_exists($modelFile)) {
-            $this->handleModelError("El archivo del modelo '{$model}' no existe.");
+            return false;
+            //throw new Exception("El archivo del modelo '{$model}' no existe."); //Se activa cuando se quiere que exista un modelo por cada controlador
         }
 
         require_once($modelFile);
 
         // Verificar si la clase del modelo existe
         if (!class_exists($model)) {
-            $this->handleModelError("La clase del modelo '{$model}' no fue encontrada.");
+            throw new Exception("La clase del modelo '{$model}' no fue encontrada.");
         }
 
         try {
@@ -41,32 +41,12 @@ class Controller
             return $modelInstance;
         } catch (Exception $e) {
             // Manejar cualquier error al cargar o conectar con el modelo
-            //$this->handleModelError($e->getMessage());
-            $this->handleModelError('Lo sentimos, no hemos podido establecer conexión con la base de datos. Por favor, inténtalo más tarde. Si el problema persiste, contacta a soporte técnico.');
+            //throw new Exception($e->getMessage()); //Error para debug
+            throw new Exception('Lo sentimos, no hemos podido establecer conexión con la base de datos. Por favor, inténtalo más tarde. Si el problema persiste, contacta a soporte técnico.');
         }
 
         return null; // Si falla, devuelve null como fallback
     }
-
-
-    // Manejo de errores al cargar el modelo
-    private function handleModelError($errorMessage)
-    {
-        global $isApi; // Variable global para identificar si es API
-        if ($isApi) {
-            ApiResponse::error($errorMessage);
-        } else {
-            // Mostrar mensaje de error (personaliza tu vista de error aquí)
-            $data = array(
-                'code' => 400,
-                'message' => $errorMessage
-            );
-            $this->loadView('errors/error', $data);
-        }
-        exit(); // Terminar la ejecución
-    }
-
-
     // Función para cargar la vista
     public function loadView($view, $data = null)
     {

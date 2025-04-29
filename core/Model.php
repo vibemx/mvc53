@@ -6,6 +6,7 @@ class Model
     protected $primaryKey = 'id';
     protected $attributes = array();
     protected $fillable = array();  // Agregado para columnas permitidas
+    protected $hidden = array();   // Columnas que no se devuelven pero se pueden usar internamente
     public function __construct(array $attributes = array())
     {
         $this->db = $this->connectDatabase();
@@ -15,14 +16,14 @@ class Model
     public function fill(array $attributes)
     {
         foreach ($attributes as $key => $value) {
-            if (in_array($key, $this->fillable)) {
+            if (in_array($key, $this->fillable) || in_array($key, $this->hidden)) {
                 $this->attributes[$key] = $value;
             }
         }
     }
     public function getAttributes()
     {
-        return $this->attributes;
+        return array_diff_key($this->attributes, array_flip($this->hidden));
     }
     protected function connectDatabase()
     {
@@ -102,12 +103,19 @@ class Model
     public static function find($id, $columns = array())
     {
         $instance = new static();  // Crea una nueva instancia del modelo
-        $columns = !empty($columns) ? implode(", ", $columns) : (empty($instance->fillable) ? '*' : implode(", ", $instance->fillable));
-        $sql = "SELECT TOP 1 {$columns} FROM {$instance->table} WHERE {$instance->primaryKey} = :id";
+        // Si no se especifican columnas, usamos solo los `fillable`
+        if (empty($columns)) {
+            $columns = $instance->fillable;
+        }
+
+        // Asegurar que se seleccionen también los `hidden` internamente
+        $columns = array_merge($columns, $instance->hidden);
+
+        $sql = "SELECT " . implode(", ", $columns) . " FROM {$instance->table} WHERE {$instance->primaryKey} = :id";
         $stmt = $instance->db->prepare($sql);
         $stmt->execute(array('id' => $id));
         $record = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($record) {
             // Al llamar a fill, los datos se asignan a los atributos del modelo
             $instance->fill($record);
@@ -116,13 +124,103 @@ class Model
         return null;
     }
 
-    public static function all( $columns = array())
+    public static function all($columns = array())
     {
         $instance = new static();
-        $columns = !empty($columns) ? implode(", ", $columns) : (empty($instance->fillable) ? '*' : implode(", ", $instance->fillable));
-        $sql = "SELECT {$columns} FROM {$instance->table}";
+
+        // Si no se especifican columnas, usamos solo los `fillable`
+        if (empty($columns)) {
+            $columns = $instance->fillable;
+        }
+
+        // Asegurar que se seleccionen también los `hidden` internamente
+        $columns = array_merge($columns, $instance->hidden);
+
+        $sql = "SELECT " . implode(", ", $columns) . " FROM {$instance->table}";
         $stmt = $instance->db->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Filtrar las columnas ocultas antes de devolver los datos
+        return array_map(function ($record) use ($instance) {
+            return array_diff_key($record, array_flip($instance->hidden));
+        }, $results);
+    }
+    public static function search($filters = array(), $columns = null, $orderBy = null, $limit = '')
+    {
+        $instance = new static();
+        // Si no se proporcionan columnas, usar los atributos (fillable) o '*' si no están definidos
+        if (is_null($columns)) {
+            // Inicializar un arreglo para almacenar las columnas
+            $columnsArray = [];
+
+            // Si el modelo tiene columnas 'fillable' definidas, las usamos
+            if (!empty($instance->fillable)) {
+                // Si 'fillable' tiene datos, las agregamos a la lista de columnas
+                $columnsArray = array_merge($columnsArray, $instance->fillable);
+            }
+
+            // Si el modelo tiene columnas 'hidden' definidas, también las agregamos a la lista de columnas
+            if (!empty($instance->hidden)) {
+                // Las columnas 'hidden' deben agregarse a la lista de columnas, pero no deben ser excluidas.
+                $columnsArray = array_merge($columnsArray, $instance->hidden);
+            }
+
+            // Si se agregaron columnas, las unimos con comas para la consulta SQL
+            if (!empty($columnsArray)) {
+                $columns = implode(", ", $columnsArray);
+            } else {
+                // Si no hay 'fillable' ni 'hidden', usamos '*' para seleccionar todas las columnas
+                $columns = '*';
+            }
+        }
+        // Agregar límite si está definido
+        if ($limit) {
+            $limit = " TOP {$limit}";
+        }
+        // Construir la cláusula SELECT
+        $sql = "SELECT {$limit} {$columns} FROM {$instance->table}";
+
+        // Si hay filtros, agregar la cláusula WHERE
+        if (!empty($filters)) {
+            $sql .= " WHERE ";
+            $conditions = array();
+            foreach ($filters as $field => $value) {
+                // Escapar el nombre del parámetro
+                $param = str_replace(array('.', '[', ']'), '_', $field);
+                $conditions[] = "{$field} like :{$param}";
+            }
+            $sql .= implode(' AND ', $conditions);
+        }
+
+        // Agregar ORDER BY si está definido
+        if ($orderBy) {
+            $sql .= " ORDER BY {$orderBy}";
+        }
+        try {
+            // Preparar la consulta
+            $stmt = $instance->db->prepare($sql);
+
+            // Asociar los valores de los filtros
+            if (!empty($filters)) {
+                foreach ($filters as $field => $value) {
+                    $param = str_replace(array('.', '[', ']'), '_', $field);
+                    $stmt->bindValue(":{$param}", $value);
+                }
+            }
+
+            // Ejecutar la consulta
+            $stmt->execute();
+            // Retornar las instancias del modelo
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $errorMessage = "SQL Error: " . $e->getMessage() .
+                " | Code: " . $e->getCode() .
+                " | File: " . $e->getFile() .
+                " | Line: " . $e->getLine();
+
+            throw new Exception($errorMessage);
+            // throw new Exception('Ocurrio un error al realizar la búsqueda.');
+        }
     }
 
 
@@ -142,8 +240,11 @@ class Model
     {
         $instance = new static();
         try {
+            if ($limit) {
+                $limit = " TOP {$limit}";
+            }
             // Construir la cláusula SELECT
-            $sql = "SELECT {$fields} FROM {$table}";
+            $sql = "SELECT {$limit} {$fields} FROM {$table}";
 
             // Agregar los JOINs si existen
             if (!empty($joins)) {
@@ -160,7 +261,7 @@ class Model
                 foreach ($where as $field => $value) {
                     // Escapar el nombre del parámetro, eliminando alias y caracteres no permitidos
                     $param = str_replace(array('.', '[', ']'), '_', $field);
-                    $conditions[] = "{$field} = :{$param}";
+                    $conditions[] = "{$field} like :{$param}";
                 }
                 $sql .= implode(' AND ', $conditions);
             }
@@ -170,10 +271,7 @@ class Model
                 $sql .= " ORDER BY {$orderBy}";
             }
 
-            // Agregar límite si está definido
-            if ($limit) {
-                $sql .= " LIMIT {$limit}";
-            }
+
 
             // Preparar la consulta
             $stmt = $instance->db->prepare($sql);
@@ -192,7 +290,73 @@ class Model
             // Retornar los resultados como un arreglo asociativo
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            throw new Exception('Ocurrio un error al realizar la busqueda.');
+            throw new Exception($e);
+        }
+    }
+    public static function paginar($tabla = null, $columns = null, $joins = '', $condiciones = '1=1', $orderBy = 'id', $page = 1, $limit = 50)
+    {
+        $instance = new static();
+        if (empty($columns)) {
+            $columns = implode(", ", $instance->fillable);
+        }
+        if (empty($tabla)) {
+            $tabla = $instance->table;
+        }
+        try {
+            $offset = ($page - 1) * $limit;
+
+            // Construcción de la consulta con ROW_NUMBER para paginación
+            $query = "SELECT * FROM (
+                    SELECT ROW_NUMBER() OVER (ORDER BY $orderBy) AS row_num, $columns
+                    FROM $tabla
+                    $joins
+                    WHERE $condiciones
+                  ) AS paginated
+                  WHERE row_num BETWEEN " . ($offset + 1) . " AND " . ($offset + $limit);
+
+            $result = self::query($query);
+
+            // Consulta para contar el total de registros
+            $countQuery = "SELECT COUNT(1) AS total FROM $tabla $joins WHERE $condiciones";
+            $countResult = self::query($countQuery);
+            $totalRecords = $countResult[0]['total'];
+
+            // Formato de respuesta
+            return array(
+                "pagination"         => array(
+                    "total"         => $totalRecords,
+                    "per_page"      => $limit,
+                    "current_page"  => $page,
+                    "last_page"     => ceil($totalRecords / $limit),
+                    "next_page_url" => $page < ceil($totalRecords / $limit) ? $page + 1 : null,
+                    "prev_page_url" => $page == 1 ? 1 : $page - 1,
+                ),
+
+                "data"          => $result
+            );
+        } catch (\Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+    }
+    public static function query($query = null)
+    {
+        $instance = new static();
+        if (!$query) {
+            throw new Exception("No se proporcionó una consulta.");
+        }
+
+        try {
+            $stmt = $instance->db->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Construir el mensaje de error manualmente
+            $errorMessage = "SQL Error: " . $e->getMessage() .
+                " | Code: " . $e->getCode() .
+                " | File: " . $e->getFile() .
+                " | Line: " . $e->getLine();
+
+            throw new Exception($errorMessage);
         }
     }
 }

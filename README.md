@@ -46,6 +46,17 @@ define('URL_BASE', 'http://localhost/mvc_53/');
 2. Configurar la base de datos en el archivo `config/config.php`.
 3. Asegurarse de que el servidor web apunte a la carpeta `public/`.
 4. Verificar permisos de escritura si es necesario.
+5. En el archivo `public/index.php`, configurar la ruta a la que se redireccionará cuando inicie el sitio.
+6. En el archivo `.htaccess`, actualizar la línea de `RewriteBase` con el nombre de la carpeta actual del proyecto.  
+   Por ejemplo, si originalmente aparece como:
+     ```htaccess
+    RewriteBase /mvc_53/
+    ```
+    Y tu proyecto está en una carpeta llamada `miproyecto`, deberías cambiarla por:
+     ```htaccess
+    RewriteBase /miproyecto/
+    ```
+
 
 ## Uso
 - Los controladores manejan la lógica de la aplicación.

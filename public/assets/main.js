@@ -1,4 +1,4 @@
-let catalogos = []; // Variable global para almacenar el catálogo de mesas
+let catalogos = {}; // Variable global para almacenar el catálogo de mesas
 document.addEventListener("DOMContentLoaded", async function () {
   BlockUI();
   await inicializarAplicacion();

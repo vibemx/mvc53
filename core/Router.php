@@ -2,12 +2,11 @@
 require_once('../config/config.php');
 require_once('../app/helpers/ApiResponse.php');
 require_once('../core/Route.php');
-
 require_once('../core/Controller.php');
 class Router extends Controller
 {
     // Almacena las rutas definidas
-    private $routes = [];
+    private $routes = array();
 
     public function __construct()
     {
@@ -25,7 +24,7 @@ class Router extends Controller
     // Manejar la solicitud entrante
     public function handleRequest()
     {
-        
+
         $request_method = $_SERVER['REQUEST_METHOD'];  // Método de la solicitud (GET, POST)
         $uri = isset($_GET['uri']) ? $_GET['uri'] : 'home/index'; // URL solicitada, por defecto 'home/index'
         if (strpos($uri, 'assets') === 0) {
@@ -43,12 +42,16 @@ class Router extends Controller
             $controllerClass = ucfirst($controller);
 
             if (file_exists($controllerFile)) {
-                require_once($controllerFile);
-                $modelo = str_replace('Controller', '', $controllerClass);
-                Controller::loadModel($modelo);
-                
-                $controllerObject = new $controllerClass();
-                self::invokeMethod($controllerObject, $method, $params);
+                try {
+                    require_once($controllerFile);
+                    $modelo = str_replace('Controller', '', $controllerClass);
+                    Controller::loadModel($modelo);
+
+                    $controllerObject = new $controllerClass();
+                    self::invokeMethod($controllerObject, $method, $params);
+                } catch (Exception $e) {
+                    self::handleError(404, $e->getMessage(), $route['type']);
+                }
             } else {
                 self::handleError(404, "El controlador '{$controllerClass}' no fue encontrado.", $route['type']);
             }
@@ -56,7 +59,9 @@ class Router extends Controller
             self::handleError(404, "La ruta '{$uri}' no fue encontrada.", $route['type']);
         }
     }
-    // Invocar el método del controlador
+    /**
+     * Invocar el método del controlador
+     */
     private function invokeMethod($controllerObject, $method, $params)
     {
         if (method_exists($controllerObject, $method)) {
@@ -65,27 +70,34 @@ class Router extends Controller
             self::handleError(404, "La acción '{$method}' no fue encontrada.", $controllerObject->getType());
         }
     }
-    // Manejar errores
-    private function handleError($code, $message, $type)
+    /**
+     * Manejador de errores
+     */
+    private function handleError($code = 404, $message = "¡Ups! La página que buscas no se encontró.", $type)
     {
-        // Si es una API, responde con JSON de error
         if (self::isApi($type)) {
-            header('Content-Type: application/json');
-            echo json_encode(array('status' => 'error', 'message' => $message, 'code' => $code));
+            ApiResponse::error($message, $code, 'Error al cargar la aplicación.');
+            exit;
         } else {
-            // Si no es una API, muestra la vista de error
-            include "../app/views/errors/404.php";
+            $data = array(
+                'code' => 400,
+                'message' => $message
+            );
+            $this->loadView('errors/error', $data);
         }
         exit;
     }
-    // Verificar si la solicitud es API
+    /**
+     * Verificar si la solicitud es API
+     */
     private function isApi($type)
     {
         $segments = explode('/', trim($_SERVER['REQUEST_URI'], '/'));
         return ($type === 'api' || $segments[1] === 'api');
     }
-
-    // Obtener la ruta del controlador
+    /**
+     * Obtener la ruta del controlador
+     */
     private function getControllerPath($route)
     {
         $controllerPath = "../app/controllers/";
