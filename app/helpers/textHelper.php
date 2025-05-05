@@ -48,7 +48,6 @@ function limpiarAcentos($txt, $n = true)
         'Ù' => 'U',
         'Û' => 'U',
         'Ü' => 'U',
-        'Ñ' => 'ñ',
         'ç' => 'c',
         'Ç' => 'C'
     );
@@ -81,13 +80,13 @@ function limpiarTexto($txt, $modo = 'default', $fmt = 'default')
     $modos = array(
         'basico' => function ($str) {
             return preg_match('/[<>{}]/', $str)
-                ? limpiarEspacios(preg_replace('/[^a-zA-Z0-9\s]/u', '', limpiarAcentos($str,false)))
-                : limpiarEspacios(limpiarAcentos($str,false));
+                ? limpiarEspacios(preg_replace('/[^a-zA-Z0-9\s]/u', '', limpiarAcentos($str, false)))
+                : limpiarEspacios(limpiarAcentos($str, false));
         },
         'basico_espaciado' => function ($str) {
             return preg_match('/[<>{}]/', $str)
-                ? preg_replace('/[^a-zA-Z0-9\s]/u', '', limpiarAcentos($str,false))
-                : limpiarAcentos($str,false);
+                ? preg_replace('/[^a-zA-Z0-9\s]/u', '', limpiarAcentos($str, false))
+                : limpiarAcentos($str, false);
         },
         'sin_acentos' => 'limpiarAcentos',
         'sin_espacios' => function ($str) {
@@ -130,4 +129,29 @@ function aplicarFormato($txt, $tipo)
         default:
             return $txt;
     }
+}
+
+function limpiarDatoRequest($valor, $tipo = 'texto', $fmt = 'default')
+{
+    $valor = trim($valor);
+
+    if ($valor === '' || is_null($valor)) {
+        return ($tipo === 'numeros') ? null : '';
+    }
+
+    // Aquí iría tu lógica original de limpiarTexto
+    return limpiarTexto($valor, $tipo, $fmt);
+}
+function utf8_converter($array)
+{
+    foreach ($array as $key => $value) {
+        if (is_array($value)) {
+            $array[$key] = utf8_converter($value);
+        } elseif (is_string($value)) {
+            if (!mb_check_encoding($value, 'UTF-8')) {
+                $array[$key] = mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
+            }
+        }
+    }
+    return $array;
 }

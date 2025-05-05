@@ -42,7 +42,7 @@ define('URL_BASE', 'http://localhost/mvc_53/');
 ## Instalación
 1. Clonar el repositorio:
     ```bash
-    git clone https://github.com/victorbeltranmx/MVC53.git
+    git clone https://github.com/vibemx/MVC53.git
     ```
 2. Configurar la base de datos en el archivo `config/config.php`.
 3. Asegurarse de que el servidor web apunte a la carpeta `public/`.

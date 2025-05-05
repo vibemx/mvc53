@@ -1,13 +1,13 @@
 <?php
 require_once('../config/config.php');
+require_once('../app/helpers/global.php');
+require_once('../app/helpers/jsonHelper.php');
+require_once('../app/helpers/textHelper.php');
 require_once('../app/helpers/ApiResponse.php');
 require_once('../core/Route.php');
 require_once('../core/Controller.php');
 class Router extends Controller
 {
-    // Almacena las rutas definidas
-    private $routes = array();
-
     public function __construct()
     {
         // Cargar las rutas definidas en routes/web.php
@@ -95,6 +95,7 @@ class Router extends Controller
         $segments = explode('/', trim($_SERVER['REQUEST_URI'], '/'));
         return ($type === 'api' || $segments[1] === 'api');
     }
+
     /**
      * Obtener la ruta del controlador
      */

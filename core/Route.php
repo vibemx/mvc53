@@ -4,7 +4,7 @@ class Route
 {
 
     // Array para almacenar las rutas
-    protected static $routes = [];
+    protected static $routes = array();
 
     // Método para registrar una ruta GET
     public static function get($uri, $action, $type = null)

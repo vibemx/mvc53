@@ -29,7 +29,7 @@ class Model
     {
         // Verificar que las constantes están definidas
         if (!defined('DB_HOST') || !defined('DB_NAME') || !defined('DB_USER') || !defined('DB_PASS')) {
-            die(json_encode(["error" => "Faltan constantes de configuración de la base de datos."]));
+            die(json_encode(array("error" => "Faltan constantes de configuración de la base de datos.")));
         }
 
         try {
@@ -42,6 +42,58 @@ class Model
         } catch (PDOException $e) {
             throw new Exception("Sin conexión: " . $e->getMessage());
         }
+    }
+/**
+ * Ejecuta una instrucción de control de transacciones en SQL Server usando PDO.
+ *
+ * Esta función permite controlar manualmente el flujo de una transacción SQL:
+ * iniciar (`BEGIN TRANSACTION`), confirmar (`COMMIT`) o revertir (`ROLLBACK`).
+ * Además, al iniciar una transacción (`begin`), establece `XACT_ABORT ON`
+ * para garantizar que cualquier error dentro de la transacción la revierta automáticamente.
+ *
+ * @param string $type Tipo de operación de transacción a ejecutar. Valores permitidos:
+ *                     - 'begin'   → Inicia una transacción.
+ *                     - 'commit'  → Confirma la transacción.
+ *                     - 'rollback'→ Revierte la transacción.
+ *
+ * @return bool `true` si la operación fue exitosa, `false` si ocurrió un error.
+ *
+ * @throws Exception Si se pasa un tipo inválido o ocurre un error en la ejecución SQL.
+ *     
+ */
+protected function transaction($type)
+{
+    try {
+        switch (strtolower($type)) {
+            case 'begin':
+                // Activa el modo XACT_ABORT para que cualquier error SQL cancele la transacción automáticamente
+                $this->db->exec("SET XACT_ABORT ON;");
+                $this->db->exec("BEGIN TRANSACTION;");
+                break;
+
+            case 'commit':
+                $this->db->exec("COMMIT;");
+                break;
+
+            case 'rollback':
+                $this->db->exec("ROLLBACK;");
+                break;
+
+            default:
+                throw new Exception("Tipo de transacción no válido: " . $type);
+        }
+        return true;
+    } catch (Exception $e) {
+        echo "Error en la transacción ($type): " . $e->getMessage();
+        return false;
+    }
+}
+
+    protected function getLastInsertId()
+    {
+        $stmt = $this->db->query("SELECT SCOPE_IDENTITY() AS last_id");
+        $row = $stmt->fetch();
+        return $row ? $row['last_id'] : null;
     }
     public function checkConnection()
     {
@@ -68,7 +120,7 @@ class Model
 
         $stmt = $this->db->prepare($sql);
         if ($stmt->execute($this->attributes)) {
-            $this->attributes[$this->primaryKey] = $this->db->lastInsertId();
+            $this->attributes[$this->primaryKey] = $this->getLastInsertId();
             return true;
         }
         return false;
@@ -151,7 +203,7 @@ class Model
         // Si no se proporcionan columnas, usar los atributos (fillable) o '*' si no están definidos
         if (is_null($columns)) {
             // Inicializar un arreglo para almacenar las columnas
-            $columnsArray = [];
+            $columnsArray = array();
 
             // Si el modelo tiene columnas 'fillable' definidas, las usamos
             if (!empty($instance->fillable)) {
@@ -196,6 +248,9 @@ class Model
         if ($orderBy) {
             $sql .= " ORDER BY {$orderBy}";
         }
+
+
+
         try {
             // Preparar la consulta
             $stmt = $instance->db->prepare($sql);
@@ -219,7 +274,7 @@ class Model
                 " | Line: " . $e->getLine();
 
             throw new Exception($errorMessage);
-            // throw new Exception('Ocurrio un error al realizar la búsqueda.');
+           // throw new Exception('Ocurrio un error al realizar la búsqueda.');
         }
     }
 
@@ -323,15 +378,15 @@ class Model
 
             // Formato de respuesta
             return array(
-                "pagination"         => array(
-                    "total"         => $totalRecords,
-                    "per_page"      => $limit,
-                    "current_page"  => $page,
-                    "last_page"     => ceil($totalRecords / $limit),
-                    "next_page_url" => $page < ceil($totalRecords / $limit) ? $page + 1 : null,
-                    "prev_page_url" => $page == 1 ? 1 : $page - 1,
-                ),
-
+                    "pagination"         => array(
+                        "total"         => $totalRecords,
+                        "per_page"      => $limit,
+                        "current_page"  => $page,
+                        "last_page"     => ceil($totalRecords / $limit),
+                        "next_page_url" => $page < ceil($totalRecords / $limit) ? $page + 1 : null,
+                        "prev_page_url" => $page == 1 ? 1 : $page - 1,
+                    ),
+                
                 "data"          => $result
             );
         } catch (\Exception $e) {
